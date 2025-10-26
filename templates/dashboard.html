@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão KANBAN</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .ruby-text { color: #c81e1e; }
+        .ruby-bg { background-color: #c81e1e; }
+        .hover\:bg-ruby-red-dark:hover { background-color: #a01818; }
+        .focus\:ring-ruby-red:focus { --tw-ring-color: #c81e1e; }
+        
+        .modal { display: none; align-items: center; justify-content: center; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); animation: fadeInBg 0.3s ease-out; }
+        
+        .modal-content {
+            margin: 1rem;
+            width: 95%;
+            animation: slideDown 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border-top: 4px solid #c81e1e;
+        }
+        
+        @keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .nav-button.active { background-color: #c81e1e; color: white; font-weight: 600; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .nav-button { transition: all 0.2s ease-in-out; }
+        
+        .project-card, .btn { transition: all 0.2s ease-in-out; }
+        .project-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        
+        .btn-primary { background-image: linear-gradient(to right, #ef4444, #b91c1c); }
+        .btn-primary:hover { box-shadow: 0 4px 15px 0 rgba(239, 68, 68, 0.45); }
+
+        .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; }
+        .border-t-4.border-slate-400 { border-top-color: #94a3b8; }
+        .border-t-4.border-blue-500 { border-top-color: #3b82f6; }
+        .border-t-4.border-green-500 { border-top-color: #22c55e; }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div class="container mx-auto p-4 md:p-8">
+        <!-- HEADER -->
+        <header class="bg-white p-6 rounded-xl shadow-lg mb-8 flex flex-col md:flex-row justify-between items-center gap-4 border-b-4 border-red-700">
+            <div class="flex items-center">
+                <div class="w-14 h-14 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center mr-5 flex-shrink-0 shadow-lg">
+                    <i class="fa-solid fa-table-columns text-white text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold ruby-text tracking-tight">Sistema de Gestão KANBAN</h1>
+                    <p class="text-slate-500 mt-1 text-sm md:text-base">RUBY Alignment - Gerencie seus projetos de forma simples e eficiente.</p>
+                </div>
+            </div>
+            <div id="user-info" class="flex items-center">
+                <div class="text-right">
+                    <p class="text-sm text-slate-600">Logado como:</p>
+                    <p class="font-bold ruby-text" id="user-display">Carregando...</p>
+                </div>
+                <button id="logout-button" title="Sair do sistema" class="ml-4 bg-slate-100 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-full text-sm transition-all duration-300 transform hover:scale-110 shadow-sm hover:shadow-md">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- NAVIGATION -->
+        <nav class="bg-white p-2 rounded-full shadow-lg mb-8 flex flex-wrap justify-center md:justify-start gap-2">
+            <button id="nav-projects-btn" class="nav-button active py-2 px-5 rounded-full ruby-text text-base">
+                <i class="fa-solid fa-briefcase mr-2"></i>Projetos
+            </button>
+            <button id="nav-users-btn" class="nav-button py-2 px-5 rounded-full ruby-text text-base">
+                <i class="fa-solid fa-users-cog mr-2"></i>Gerenciamento de Usuários
+            </button>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main id="main-content">
+            <!-- PROJECTS VIEW -->
+            <div id="projects-view">
+                 <div class="mb-6 bg-white p-4 rounded-2xl shadow-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                        <!-- Buscar por Título -->
+                        <div class="lg:col-span-2 relative">
+                            <label for="search-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                                Buscar por Título
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" id="search-filter" 
+                                    class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                                    placeholder="Digite o nome do projeto...">
+                            </div>
+                        </div>
+
+                        <!-- Filtro de Urgência -->
+                        <div>
+                            <label for="urgency-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                                Urgência
+                            </label>
+                            <select id="urgency-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                                <option value="all">Todas</option>
+                                <option>Baixa</option>
+                                <option>Média</option>
+                                <option>Alta</option>
+                                <option>Urgente</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtro de Solicitante -->
+                        <div>
+                            <label for="solicitante-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                                Solicitante
+                            </label>
+                            <select id="solicitante-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                                <option value="all">Todos</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtro de Colaborador -->
+                        <div>
+                            <label for="colaborador-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                                Colaborador
+                            </label>
+                            <select id="colaborador-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                                <option value="all">Todos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-bold text-slate-700">Painel de Projetos</h2>
+                    <div class="flex items-center gap-4 w-full md:w-auto">
+                        <select id="sort-projects-filter" class="w-full md:w-auto bg-white border border-slate-300 rounded-lg shadow-sm py-2 px-3">
+                            <option value="newest">Mais Recentes</option>
+                            <option value="oldest">Mais Antigos</option>
+                            <option value="alpha">Ordem Alfabética</option>
+                        </select>
+                        <button id="open-cadastro-projeto-modal-btn" class="btn btn-primary w-full md:w-auto text-white font-bold py-2 px-5 rounded-lg flex items-center justify-center whitespace-nowrap shadow-md transform hover:scale-105">
+                            <i class="fa-solid fa-plus mr-2"></i>Cadastrar Projeto
+                        </button>
+                    </div>
+                </div>
+                <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <p class="text-slate-500 col-span-full text-center">Carregando projetos...</p>
+                </div>
+            </div>
+
+            <!-- USERS VIEW -->
+            <div id="users-view" style="display: none;">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                     <div>
+                         <h2 class="text-2xl font-bold text-slate-700">Gerenciamento de Usuários</h2>
+                         <p class="text-slate-500">Adicione, edite ou remova usuários do sistema.</p>
+                     </div>
+                    <button id="open-cadastro-usuario-modal-btn" class="btn btn-primary w-full md:w-auto text-white font-bold py-2 px-5 rounded-lg flex items-center justify-center shadow-md transform hover:scale-105">
+                        <i class="fa-solid fa-user-plus mr-2"></i>Cadastrar Usuário
+                    </button>
+                </div>
+                <div id="users-container" class="bg-white rounded-xl shadow-lg overflow-hidden">
+                     <p class="text-slate-500 p-4 text-center">Carregando usuários...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- MODAIS -->
+    <!-- ======================================================================= -->
+    <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-500" style="z-index: 2000;">
+        <p id="toast-message"></p>
+    </div>
+
+    <div id="change-password-modal" class="modal">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="flex items-center justify-between p-5 border-b rounded-t-lg">
+                <h2 class="text-xl font-bold text-slate-800">Alteração de Senha</h2>
+                <button type="button" class="btn-close-modal text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="change-password-form">
+                <div class="p-6 space-y-4 bg-slate-50">
+                    <p class="text-sm text-slate-600">Por segurança, crie uma nova senha para seu primeiro acesso.</p>
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-700">Nova Senha</label>
+                        <input type="password" id="new_password" name="new_password" class="form-input" required>
+                    </div>
+                    <div>
+                        <label for="confirm_password" class="block text-sm font-medium text-gray-700">Confirme a Nova Senha</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-input" required>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-4 p-5 bg-slate-100 border-t rounded-b-lg">
+                    <button type="submit" class="w-full ruby-bg hover:bg-ruby-red-dark text-white font-bold py-2 px-4 rounded-lg">Salvar Nova Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="cadastro-projeto-modal" class="modal">
+        <div class="modal-content bg-white rounded-2xl shadow-xl max-w-3xl mx-4">
+            <div class="flex justify-between items-center p-4 border-b rounded-t-2xl">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fa-solid fa-folder-plus text-red-600 mr-2"></i>
+                    Cadastrar Novo Projeto
+                </h2>
+                <button type="button" class="btn-close-modal text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="cadastro-projeto-form">
+                <div class="p-4 space-y-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
+                    <div class="space-y-4">
+                        <!-- Título -->
+                        <div>
+                            <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">
+                                Título do Projeto *
+                            </label>
+                            <input type="text" id="titulo" name="titulo" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                placeholder="Ex: Relatório de Vendas Trimestral">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Data Limite -->
+                            <div>
+                                <label for="dataLimite" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Data Limite
+                                </label>
+                                <input type="date" id="dataLimite" name="dataLimite"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                            </div>
+
+                            <!-- Supervisor -->
+                            <div>
+                                <label for="supervisor_responsavel" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Supervisor Responsável
+                                </label>
+                                <input type="text" id="supervisor_responsavel" name="supervisor_responsavel"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="Nome do supervisor">
+                            </div>
+                        </div>
+
+                        <!-- Objetivo -->
+                        <div>
+                            <label for="objetivo" class="block text-sm font-medium text-gray-700 mb-1">
+                                Objetivo
+                            </label>
+                            <textarea id="objetivo" name="objetivo" rows="2"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                                placeholder="Qual o principal objetivo deste projeto?"></textarea>
+                        </div>
+
+                        <!-- Descrição -->
+                        <div>
+                            <label for="descricao" class="block text-sm font-medium text-gray-700 mb-1">
+                                Descrição Detalhada *
+                            </label>
+                            <textarea id="descricao" name="descricao" rows="4" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                                placeholder="Forneça detalhes, requisitos e informações relevantes..."></textarea>
+                        </div>
+
+                        <!-- Habilidades -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Habilidades Desejadas (Opcional)
+                            </label>
+                            <div id="project-skills-checkboxes" 
+                                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-3 border border-gray-300 rounded-xl bg-white max-h-32 overflow-y-auto">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex flex-col sm:flex-row justify-end gap-2 p-4 bg-gray-100 rounded-b-2xl border-t">
+                    <button type="button" 
+                        class="btn-close-modal px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors order-2 sm:order-1">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                        class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors order-1 sm:order-2">
+                        Salvar Projeto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="urgencia-modal" class="modal">
+        <div class="modal-content bg-white rounded-2xl shadow-xl max-w-md mx-4">
+            <div class="flex justify-between items-center p-4 border-b rounded-t-2xl">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fa-solid fa-triangle-exclamation text-red-600 mr-2"></i>
+                    Alterar Urgência
+                </h2>
+                <button type="button" class="btn-close-modal text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="urgencia-form">
+                <div class="p-4 space-y-4 bg-gray-50">
+                    <input type="hidden" id="urgencia-project-id">
+                    
+                    <!-- Nome do Projeto -->
+                    <p class="text-gray-700">
+                        Projeto: <strong id="urgencia-project-name" class="font-semibold"></strong>
+                    </p>
+
+                    <!-- Seleção de Urgência -->
+                    <div>
+                        <label for="urgencia-select" class="block text-sm font-medium text-gray-700 mb-1">
+                            Urgência
+                        </label>
+                        <select id="urgencia-select"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                            <option>Baixa</option>
+                            <option>Média</option>
+                            <option>Alta</option>
+                            <option>Urgente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex flex-col sm:flex-row justify-end gap-2 p-4 bg-gray-100 rounded-b-2xl border-t">
+                    <button type="button" 
+                        class="btn-close-modal px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors order-2 sm:order-1">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                        class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors order-1 sm:order-2">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="adesao-modal" class="modal">
+        <div class="modal-content bg-white rounded-2xl shadow-xl max-w-2xl mx-4">
+            <div class="flex justify-between items-center p-4 border-b rounded-t-2xl">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fa-solid fa-users text-green-600 mr-2"></i>
+                    Atribuir Colaboradores
+                </h2>
+                <button type="button" class="btn-close-modal text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="adesao-form">
+                <div class="p-4 space-y-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
+                    <input type="hidden" id="adesao-project-id">
+                    
+                    <!-- Nome do Projeto -->
+                    <p class="text-gray-700">
+                        Projeto: <strong id="adesao-project-name" class="font-semibold"></strong>
+                    </p>
+
+                    <!-- Habilidades Desejadas -->
+                    <div class="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                        <h4 class="font-semibold text-blue-800 text-sm mb-2">
+                            Habilidades Desejadas para este Projeto:
+                        </h4>
+                        <div id="adesao-habilidades" class="text-sm text-blue-700"></div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Colaborador Responsável -->
+                        <div>
+                            <label for="estagiario_responsavel" class="block text-sm font-medium text-gray-700 mb-1">
+                                Colaborador Responsável *
+                            </label>
+                            <select id="estagiario_responsavel" name="estagiario_responsavel" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                <option value="">Carregando sugestões...</option>
+                            </select>
+                        </div>
+
+                        <!-- Colaboradores Adicionais -->
+                        <div id="additional-collaborators-container" class="space-y-3"></div>
+
+                        <!-- Botão Adicionar Colaborador -->
+                        <button type="button" id="add-collaborator-btn" 
+                            class="text-sm text-green-600 hover:text-green-800 font-semibold transition-colors">
+                            <i class="fa-solid fa-plus mr-2"></i>
+                            Adicionar outro integrante
+                        </button>
+                    </div>
+
+                    <!-- Datas -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
+                        <div>
+                            <label for="inicio_projeto" class="block text-sm font-medium text-gray-700 mb-1">
+                                Início do Projeto *
+                            </label>
+                            <input type="date" id="inicio_projeto" name="inicio_projeto" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        </div>
+                        <div>
+                            <label for="previsao_termino" class="block text-sm font-medium text-gray-700 mb-1">
+                                Previsão de Término *
+                            </label>
+                            <input type="date" id="previsao_termino" name="previsao_termino" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex flex-col sm:flex-row justify-end gap-2 p-4 bg-gray-100 rounded-b-2xl border-t">
+                    <button type="button" 
+                        class="btn-close-modal px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors order-2 sm:order-1">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                        class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors order-1 sm:order-2">
+                        <i class="fa-solid fa-users mr-2"></i>
+                        Atribuir e Iniciar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="andamento-modal" class="modal">
+        <div class="modal-content bg-white rounded-2xl shadow-xl max-w-3xl mx-4">
+            <div class="flex justify-between items-center p-4 border-b rounded-t-2xl">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    <i class="fa-solid fa-person-running text-blue-600 mr-2"></i>
+                    Atualizar Andamento
+                </h2>
+                <button type="button" class="btn-close-modal text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="andamento-form">
+                <div class="p-4 space-y-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
+                    <input type="hidden" id="andamento-project-id">
+                    
+                    <!-- Nome do Projeto -->
+                    <p class="text-gray-700">
+                        Projeto: <strong id="andamento-project-name" class="font-semibold"></strong>
+                    </p>
+
+                    <div class="space-y-4">
+                        <!-- Etapas do Processo -->
+                        <div class="border-b pb-2">
+                            <h3 class="font-semibold text-gray-600">Etapas do Processo</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Reunião de Requisitos -->
+                            <div>
+                                <label for="reuniao_requisitos" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Reunião de Requisitos
+                                </label>
+                                <select id="reuniao_requisitos" name="reuniao_requisitos"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>NÃO REALIZADO</option>
+                                    <option>EM ANDAMENTO</option>
+                                    <option>REALIZADO</option>
+                                </select>
+                            </div>
+
+                            <!-- Coleta/Preparação de Dados -->
+                            <div>
+                                <label for="coleta_preparacao_dados" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Coleta/Preparação de Dados
+                                </label>
+                                <select id="coleta_preparacao_dados" name="coleta_preparacao_dados"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>NÃO REALIZADO</option>
+                                    <option>EM ANDAMENTO</option>
+                                    <option>REALIZADO</option>
+                                </select>
+                            </div>
+
+                            <!-- Criação de Relatório/Dashboard -->
+                            <div>
+                                <label for="criacao_relatorio_dashboard" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Criação de Relatório/Dashboard
+                                </label>
+                                <select id="criacao_relatorio_dashboard" name="criacao_relatorio_dashboard"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>NÃO REALIZADO</option>
+                                    <option>EM ANDAMENTO</option>
+                                    <option>REALIZADO</option>
+                                </select>
+                            </div>
+
+                            <!-- Validação/Refinamento -->
+                            <div>
+                                <label for="validacao_refinamento" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Validação/Refinamento
+                                </label>
+                                <select id="validacao_refinamento" name="validacao_refinamento"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>NÃO REALIZADO</option>
+                                    <option>EM ANDAMENTO</option>
+                                    <option>REALIZADO</option>
+                                </select>
+                            </div>
+
+                            <!-- Documentação -->
+                            <div>
+                                <label for="documentacao" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Documentação
+                                </label>
+                                <select id="documentacao" name="documentacao"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>NÃO REALIZADO</option>
+                                    <option>EM ANDAMENTO</option>
+                                    <option>REALIZADO</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Status Geral -->
+                        <div class="border-b pb-2 pt-2">
+                            <h3 class="font-semibold text-gray-600">Status Geral</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Status Geral do Projeto -->
+                            <div>
+                                <label for="status_geral" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Status Geral do Projeto
+                                </label>
+                                <select id="status_geral" name="status_geral"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="EM ANDAMENTO">Em Andamento</option>
+                                    <option value="CONCLUÍDO">Concluído</option>
+                                </select>
+                            </div>
+
+                            <!-- Data de Conclusão -->
+                            <div>
+                                <label for="dataConclusao" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Data de Conclusão
+                                </label>
+                                <input type="date" id="dataConclusao" name="dataConclusao"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div>
+                            <label for="observacao" class="block text-sm font-medium text-gray-700 mb-1">
+                                Observações
+                            </label>
+                            <textarea id="observacao" name="observacao" rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                placeholder="Adicione observações relevantes..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex flex-col sm:flex-row justify-end gap-2 p-4 bg-gray-100 rounded-b-2xl border-t">
+                    <button type="button" 
+                        class="btn-close-modal px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors order-2 sm:order-1">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                        class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors order-1 sm:order-2">
+                        <i class="fa-solid fa-save mr-2"></i>
+                        Atualizar Andamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="users-modal" class="modal">
+        <div class="modal-content bg-white rounded-2xl shadow-xl max-w-3xl mx-4">
+            <div class="flex justify-between items-center p-4 border-b rounded-t-2xl">
+                <h2 class="text-lg font-semibold text-gray-900" id="user-modal-title">
+                    <i class="fa-solid fa-user-plus text-red-600 mr-2"></i>
+                    Adicionar Usuário
+                </h2>
+                <button type="button" class="btn-close-modal text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="users-form">
+                <div class="p-4 space-y-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
+                    <input type="hidden" id="user-id">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Nome Completo -->
+                            <div>
+                                <label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Nome Completo *
+                                </label>
+                                <input type="text" id="nome_completo" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="Ex: João da Silva">
+                            </div>
+
+                            <!-- Nome de Login -->
+                            <div>
+                                <label for="nome_login" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Nome de Login (Apelido) *
+                                </label>
+                                <input type="text" id="nome_login" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="Ex: João">
+                            </div>
+
+                            <!-- E-mail Pessoal -->
+                            <div>
+                                <label for="personal_email" class="block text-sm font-medium text-gray-700 mb-1">
+                                    E-mail Pessoal *
+                                </label>
+                                <input type="email" id="personal_email" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="exemplo@email.com">
+                            </div>
+
+                            <!-- Telefone -->
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Telefone *
+                                </label>
+                                <input type="tel" id="phone" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="(XX) XXXXX-XXXX">
+                            </div>
+
+                            <!-- Data de Admissão -->
+                            <div>
+                                <label for="admission_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Data de Admissão *
+                                </label>
+                                <input type="date" id="admission_date" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                            </div>
+
+                            <!-- Perfil -->
+                            <div>
+                                <label for="new-user-role" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Perfil *
+                                </label>
+                                <select id="new-user-role" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                    <option value="Solicitante">Solicitante</option>
+                                    <option value="Colaborador">Colaborador</option>
+                                    <option value="Administrador">Administrador</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Habilidades -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Habilidades (Hard Skills)
+                            </label>
+                            <div id="user-skills-checkboxes" 
+                                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-3 border border-gray-300 rounded-xl bg-white max-h-32 overflow-y-auto">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-4 bg-gray-100 rounded-b-2xl border-t">
+                    <p class="text-xs text-gray-500 mb-4">
+                        Um e-mail corporativo será gerado automaticamente. A senha padrão será definida para novos usuários.
+                    </p>
+                    <div class="flex flex-col sm:flex-row justify-end gap-2">
+                        <button type="button" 
+                            class="btn-close-modal px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors order-2 sm:order-1">
+                            Cancelar
+                        </button>
+                        <button type="submit" 
+                            class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors order-1 sm:order-2">
+                            Salvar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', initializeApp);
+
+    let currentUser = {};
+    let allProjects = []; 
+    let allUsers = []; 
+
+    // Função para mostrar notificações (toast)
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        toast.style.transform = 'translateX(100%)';
+        toastMessage.textContent = message;
+        toast.className = `fixed top-5 right-5 ${isError ? 'bg-red-500' : 'bg-green-500'} text-white py-2 px-4 rounded-lg shadow-lg transform transition-transform duration-500`;
+        setTimeout(() => { toast.style.transform = 'translateX(0)'; }, 10);
+        setTimeout(() => { toast.style.transform = 'translateX(100%)'; }, 5000);
+    }
+
+    // Funções para abrir e fechar modais
+    function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+    
+    // Função de logout
+    function handleLogout() { window.location.href = '/logout'; }
+
+    // Alterna entre a visualização de projetos e de usuários
+    function switchView(viewName) {
+        document.getElementById('projects-view').style.display = viewName === 'projects' ? 'block' : 'none';
+        document.getElementById('users-view').style.display = viewName === 'users' ? 'block' : 'none';
+        document.getElementById('nav-projects-btn').classList.toggle('active', viewName === 'projects');
+        document.getElementById('nav-users-btn').classList.toggle('active', viewName === 'users');
+        if (viewName === 'projects') loadProjects();
+        if (viewName === 'users') loadUsers();
+    }
+
+    // Renderiza a lista de projetos na tela
+    function renderProjects(projects) {
+        const container = document.getElementById('projects-container');
+        if (!projects || projects.length === 0) {
+            container.innerHTML = `<p class="text-slate-500 col-span-full text-center py-10">Nenhum projeto encontrado.</p>`;
+            return;
+        }
+        container.innerHTML = projects.map(createProjectCard).join('');
+        addProjectCardEventListeners();
+    }
+
+    // Cria o HTML de um único card de projeto
+    function createProjectCard(project) {
+        const statusInfo = {
+            'NÃO INICIADO': { class: 'bg-slate-100 text-slate-800', border: 'border-slate-400' },
+            'EM ANDAMENTO': { class: 'bg-blue-100 text-blue-800', border: 'border-blue-500' },
+            'CONCLUÍDO': { class: 'bg-green-100 text-green-800', border: 'border-green-500' },
+        }[project.status_nome] || { class: 'bg-gray-200 text-gray-800', border: 'border-gray-400' };
+        
+        const urgencyInfo = {
+            'Baixa': { class: 'text-green-600', icon: 'fa-flag text-green-500' },
+            'Média': { class: 'text-yellow-600', icon: 'fa-flag text-yellow-500' },
+            'Alta': { class: 'text-red-600', icon: 'fa-flag text-red-500' },
+            'Urgente': { class: 'text-purple-600', icon: 'fa-flag text-purple-500' },
+        }[project.urgencia] || { class: 'text-gray-600', icon: 'fa-flag text-gray-500' };
+        
+        // Define quais botões de ação são visíveis para o usuário
+        let actionButtons = '';
+        if (currentUser.user_role === 'ADMINISTRADOR' || currentUser.user_role === 'SOLICITANTE') {
+             if (project.status_nome === 'NÃO INICIADO') {
+                actionButtons += `<button data-project-id="${project.idDemandas}" data-project-name="${project.titulo}" class="btn-adesao bg-green-100 hover:bg-green-200 text-green-800 font-semibold py-2 px-3 rounded-lg text-xs shadow-sm transform hover:scale-105"><i class="fa-solid fa-users mr-1"></i> Atribuir</button>`;
+             }
+            actionButtons += `<button data-project-id="${project.idDemandas}" data-project-name="${project.titulo}" data-project-urgency="${project.urgencia || 'Média'}" class="btn-urgencia bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-3 rounded-lg text-xs shadow-sm transform hover:scale-105" title="Alterar Urgência"><i class="fa-solid fa-triangle-exclamation"></i></button>`;
+        }
+        if (project.status_nome !== 'NÃO INICIADO' && (currentUser.user_role === 'ADMINISTRADOR' || currentUser.user_role === 'SOLICITANTE' || (project.colaborador_nome && project.colaborador_nome.includes(currentUser.user_name)))) {
+            actionButtons += `<button data-project-id="${project.idDemandas}" data-project-name="${project.titulo}" class="btn-andamento bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-3 rounded-lg text-xs shadow-sm transform hover:scale-105" title="Atualizar Andamento"><i class="fa-solid fa-person-running"></i></button>`;
+        }
+        
+        return `
+            <div class="project-card bg-white rounded-xl shadow-lg p-6 flex flex-col justify-between border-t-4 ${statusInfo.border}">
+                <div>
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-600">${project.titulo}</h3>
+                        <span class="text-xs font-semibold px-2 py-1 rounded-full ${statusInfo.class}">${project.status_nome}</span>
+                    </div>
+                    <p class="text-slate-600 text-sm mb-4 line-clamp-5 whitespace-pre-line break-words">${project.descricao || 'Sem descrição.'}</p>
+                    <div class="text-xs text-slate-500 space-y-2 mt-4 border-t pt-3">
+                         <p><strong>Solicitante:</strong> ${project.solicitante_nome || 'N/A'}</p>
+                         <p><strong>Integrantes:</strong> ${project.colaborador_nome || 'Nenhum atribuído'}</p>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t">
+                   <div class="flex justify-between items-center text-xs text-slate-500 mb-4">
+                        <span class="font-medium flex items-center gap-2"><i class="fa-solid ${urgencyInfo.icon}"></i>Urgência: <strong class="${urgencyInfo.class}">${project.urgencia || 'N/D'}</strong></span>
+                        <span class="font-medium">Criação: ${project.dataAbertura}</span>
+                    </div>
+                    <div class="flex items-center justify-end gap-2">${actionButtons}</div>
+                </div>
+            </div>`;
+    }
+
+    // Renderiza a lista de usuários
+    function renderUsers(users) {
+        const container = document.getElementById('users-container');
+        if (!users || users.length === 0) {
+            container.innerHTML = `<p class="text-slate-500 p-4 text-center">Nenhum usuário cadastrado.</p>`;
+            return;
+        }
+        container.innerHTML = users.map(createUserItem).join('');
+        addUserEventListeners();
+    }
+
+    // Cria o HTML para um item na lista de usuários
+    function createUserItem(user) {
+        const profileClass = {
+            'ADMINISTRADOR': 'bg-purple-100 text-purple-800',
+            'SOLICITANTE': 'bg-blue-100 text-blue-800',
+            'COLABORADOR': 'bg-green-100 text-green-800',
+        }[user.perfil] || 'bg-slate-100 text-slate-800';
+
+        return `
+            <div class="p-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-slate-800">${user.nome_completo} (${user.nome})</h3>
+                    <p class="text-sm text-slate-600">${user.email}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-xs font-semibold px-3 py-1 rounded-full ${profileClass}">${user.perfil}</span>
+                    <div class="flex gap-2">
+                        <button data-user-id="${user.idADM}" class="btn-edit-user text-blue-500 hover:text-blue-700" title="Editar Usuário"><i class="fa-solid fa-edit"></i></button>
+                        <button data-user-id="${user.idADM}" data-user-name="${user.nome_completo}" class="btn-delete-user text-red-500 hover:text-red-700" title="Excluir Usuário"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    // Função genérica para carregar dados da API
+    async function loadData(endpoint, successCallback, errorCallback) {
+        try {
+            const response = await fetch(endpoint);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Falha ao carregar dados.');
+            successCallback(result.data || []);
+        } catch (error) {
+            showToast(error.message, true);
+            if (errorCallback) errorCallback(error.message);
+        }
+    }
+    
+    // Carrega os projetos da API
+    function loadProjects() {
+        loadData('/api/projects', 
+            data => { allProjects = data; applyFiltersAndSort(); populateFilters(); },
+            errorMsg => { document.getElementById('projects-container').innerHTML = `<p class="text-red-500 col-span-full text-center">${errorMsg}</p>`; }
+        );
+    }
+
+    // Carrega os usuários da API
+    function loadUsers() {
+        loadData('/api/users', 
+            data => { allUsers = data; renderUsers(allUsers); },
+            errorMsg => { document.getElementById('users-container').innerHTML = `<p class="text-red-500 p-4 text-center">${errorMsg}</p>`; }
+        );
+    }
+    
+    // Aplica filtros e ordenação na lista de projetos
+    function applyFiltersAndSort() {
+        const searchTerm = document.getElementById('search-filter').value.toLowerCase();
+        const urgency = document.getElementById('urgency-filter').value;
+        const solicitante = document.getElementById('solicitante-filter').value;
+        const colaborador = document.getElementById('colaborador-filter').value;
+        const sortBy = document.getElementById('sort-projects-filter').value;
+
+        let filteredProjects = allProjects.filter(p => {
+            const titleMatch = p.titulo.toLowerCase().includes(searchTerm);
+            const urgencyMatch = urgency === 'all' || p.urgencia === urgency;
+            const solicitanteMatch = solicitante === 'all' || p.solicitante_nome === solicitante;
+            const colaboradorMatch = colaborador === 'all' || (p.colaborador_nome && p.colaborador_nome.includes(colaborador));
+            return titleMatch && urgencyMatch && solicitanteMatch && colaboradorMatch;
+        });
+
+        filteredProjects.sort((a, b) => {
+            if (sortBy === 'alpha') return a.titulo.localeCompare(b.titulo);
+            try {
+                const dateA = new Date(a.dataAbertura.split('/').reverse().join('-'));
+                const dateB = new Date(b.dataAbertura.split('/').reverse().join('-'));
+                return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+            } catch (e) { return 0; }
+        });
+        renderProjects(filteredProjects);
+    }
+    
+    // Preenche os selects de filtro com dados dos projetos
+    function populateFilters() {
+        const solicitantes = [...new Set(allProjects.map(p => p.solicitante_nome).filter(Boolean))];
+        const colaboradores = [...new Set(allProjects.flatMap(p => p.colaborador_nome ? p.colaborador_nome.split(', ') : []).filter(Boolean))];
+        
+        const solicitanteSelect = document.getElementById('solicitante-filter');
+        solicitanteSelect.innerHTML = '<option value="all">Todos Solicitantes</option>' + solicitantes.map(s => `<option value="${s}">${s}</option>`).join('');
+
+        const colaboradorSelect = document.getElementById('colaborador-filter');
+        colaboradorSelect.innerHTML = '<option value="all">Todos Colaboradores</option>' + colaboradores.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    // Função genérica para submeter formulários para a API
+    async function handleApiFormSubmit(url, method, formData, modalId, successCallback) {
+        try {
+            const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: formData ? JSON.stringify(formData) : null });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Ação falhou.');
+            showToast(result.message);
+            if (modalId) closeModal(modalId);
+            if (successCallback) successCallback();
+        } catch (error) {
+            showToast(error.message, true);
+        }
+    }
+
+    // Manipula a submissão do formulário de criação de projeto
+    function handleProjectFormSubmit(event) {
+        event.preventDefault();
+        
+        const skillsCheckboxes = document.querySelectorAll('#project-skills-checkboxes input:checked');
+        const selectedSkills = Array.from(skillsCheckboxes).map(cb => cb.value).join(', ');
+        const descricao = document.getElementById('descricao').value;
+        const descricaoFinal = selectedSkills ? `${descricao}\n\nHabilidades Desejadas: ${selectedSkills}` : descricao;
+
+        const formData = {
+            titulo: document.getElementById('titulo').value,
+            descricao: descricaoFinal,
+            objetivo: document.getElementById('objetivo').value,
+            dataLimite: document.getElementById('dataLimite').value,
+            supervisor_responsavel: document.getElementById('supervisor_responsavel').value
+        };
+        handleApiFormSubmit('/api/projects', 'POST', formData, 'cadastro-projeto-modal', loadProjects);
+    }
+    
+    // Manipula a submissão do formulário de usuário
+    function handleUserFormSubmit(event) {
+        event.preventDefault();
+        const userId = document.getElementById('user-id').value;
+        const skillsCheckboxes = document.querySelectorAll('#user-skills-checkboxes input:checked');
+        const selectedSkills = Array.from(skillsCheckboxes).map(cb => cb.value);
+
+        const formData = {
+            nome_login: document.getElementById('nome_login').value,
+            nome_completo: document.getElementById('nome_completo').value,
+            personal_email: document.getElementById('personal_email').value,
+            phone: document.getElementById('phone').value,
+            admission_date: document.getElementById('admission_date').value,
+            role: document.getElementById('new-user-role').value,
+            skills: selectedSkills
+        };
+        handleApiFormSubmit(userId ? `/api/users/${userId}` : '/api/users', userId ? 'PUT' : 'POST', formData, 'users-modal', loadUsers);
+    }
+
+    // Deleta um usuário
+    function deleteUser(userId, userName) {
+        if (!confirm(`Tem certeza que deseja excluir o usuário "${userName}"?`)) return;
+        handleApiFormSubmit(`/api/users/${userId}`, 'DELETE', null, null, loadUsers);
+    }
+    
+    // Manipula a submissão do formulário de urgência
+    function handleUrgencyFormSubmit(event) {
+        event.preventDefault();
+        const projectId = document.getElementById('urgencia-project-id').value;
+        const formData = { urgencia: document.getElementById('urgencia-select').value };
+        handleApiFormSubmit(`/api/projects/${projectId}/urgency`, 'PUT', formData, 'urgencia-modal', loadProjects);
+    }
+    
+    // Manipula a submissão do formulário de adesão
+    function handleAdesaoFormSubmit(event) {
+        event.preventDefault();
+        const projectId = document.getElementById('adesao-project-id').value;
+        const integrantes = [document.getElementById('estagiario_responsavel').value];
+        document.querySelectorAll('.additional-collaborator-select').forEach(select => { if(select.value) integrantes.push(select.value); });
+        const formData = {
+            integrantes: [...new Set(integrantes)].filter(Boolean),
+            inicio_projeto: document.getElementById('inicio_projeto').value,
+            previsao_termino: document.getElementById('previsao_termino').value,
+        };
+        handleApiFormSubmit(`/api/projects/${projectId}/adhere`, 'POST', formData, 'adesao-modal', loadProjects);
+    }
+    
+    // Manipula a submissão do formulário de andamento
+    function handleAndamentoFormSubmit(event) {
+        event.preventDefault();
+        const projectId = document.getElementById('andamento-project-id').value;
+        const formData = {
+            reuniao_requisitos: document.getElementById('reuniao_requisitos').value,
+            coleta_preparacao_dados: document.getElementById('coleta_preparacao_dados').value,
+            criacao_relatorio_dashboard: document.getElementById('criacao_relatorio_dashboard').value,
+            validacao_refinamento: document.getElementById('validacao_refinamento').value,
+            documentacao: document.getElementById('documentacao').value,
+            status_geral: document.getElementById('status_geral').value,
+            dataConclusao: document.getElementById('dataConclusao').value,
+            observacao: document.getElementById('observacao').value
+        };
+        handleApiFormSubmit(`/api/projects/${projectId}/status`, 'PUT', formData, 'andamento-modal', loadProjects);
+    }
+
+    // Função principal de inicialização da aplicação
+    async function initializeApp() {
+        try {
+            const response = await fetch('/api/session');
+            if (!response.ok) {
+                // Se a API falhar, redireciona para o login
+                throw new Error('Sessão inválida ou expirada.');
+            }
+            currentUser = await response.json();
+            document.getElementById('user-display').textContent = `${currentUser.user_name} (${currentUser.user_role})`;
+            
+            // Esconde botões/links baseados no perfil do usuário
+            if(currentUser.user_role !== 'ADMINISTRADOR'){
+                document.getElementById('nav-users-btn').style.display = 'none';
+            }
+            if(currentUser.user_role !== 'ADMINISTRADOR' && currentUser.user_role !== 'SOLICITANTE') {
+                 document.getElementById('open-cadastro-projeto-modal-btn').style.display = 'none';
+            }
+
+        } catch (error) {
+            // Em caso de erro ao buscar a sessão, redireciona para a página de login
+            window.location.href = '/login';
+            return;
+        }
+
+        populateSkillsCheckboxes('user-skills-checkboxes');
+        populateSkillsCheckboxes('project-skills-checkboxes');
+        setupEventListeners();
+        switchView('projects'); // Inicia na tela de projetos
+    }
+
+    // Configura todos os event listeners da página
+    function setupEventListeners() {
+        document.getElementById('nav-projects-btn').addEventListener('click', () => switchView('projects'));
+        document.getElementById('nav-users-btn').addEventListener('click', () => switchView('users'));
+        document.getElementById('logout-button').addEventListener('click', handleLogout);
+        document.getElementById('open-cadastro-projeto-modal-btn').addEventListener('click', openCadastroProjetoModal);
+        document.getElementById('open-cadastro-usuario-modal-btn').addEventListener('click', openAddUserModal);
+        document.querySelectorAll('.btn-close-modal').forEach(btn => btn.addEventListener('click', () => closeModal(btn.closest('.modal').id)));
+        
+        // Formulários
+        document.getElementById('cadastro-projeto-form').addEventListener('submit', handleProjectFormSubmit);
+        document.getElementById('users-form').addEventListener('submit', handleUserFormSubmit);
+        document.getElementById('urgencia-form').addEventListener('submit', handleUrgencyFormSubmit);
+        document.getElementById('adesao-form').addEventListener('submit', handleAdesaoFormSubmit);
+        document.getElementById('andamento-form').addEventListener('submit', handleAndamentoFormSubmit);
+        
+        // Filtros
+        document.getElementById('sort-projects-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('search-filter').addEventListener('input', applyFiltersAndSort);
+        document.getElementById('urgency-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('solicitante-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('colaborador-filter').addEventListener('change', applyFiltersAndSort);
+
+        document.getElementById('add-collaborator-btn').addEventListener('click', addCollaboratorField);
+    }
+    
+    // Adiciona event listeners aos botões dos cards de projeto
+    function addProjectCardEventListeners() {
+        document.querySelectorAll('.btn-adesao').forEach(btn => btn.addEventListener('click', openAdesaoModal));
+        document.querySelectorAll('.btn-urgencia').forEach(btn => btn.addEventListener('click', openUrgenciaModal));
+        document.querySelectorAll('.btn-andamento').forEach(btn => btn.addEventListener('click', openAndamentoModal));
+    }
+    
+    // Adiciona event listeners aos botões da lista de usuários
+    function addUserEventListeners() {
+        document.querySelectorAll('.btn-edit-user').forEach(btn => btn.addEventListener('click', openEditUserModal));
+        document.querySelectorAll('.btn-delete-user').forEach(btn => btn.addEventListener('click', (e) => {
+            const { userId, userName } = e.currentTarget.dataset;
+            deleteUser(userId, userName);
+        }));
+    }
+    
+    // Funções para abrir modais específicos
+    function openCadastroProjetoModal() {
+        document.getElementById('cadastro-projeto-form').reset();
+        openModal('cadastro-projeto-modal');
+    }
+
+    function openAddUserModal() {
+        document.getElementById('users-form').reset();
+        document.getElementById('user-id').value = '';
+        document.getElementById('user-modal-title').textContent = 'Adicionar Novo Usuário';
+        document.getElementById('personal_email').disabled = false;
+        openModal('users-modal');
+    }
+    
+    async function openEditUserModal(event) {
+        const userId = event.currentTarget.dataset.userId;
+        document.getElementById('users-form').reset();
+        openModal('users-modal');
+        document.getElementById('user-modal-title').textContent = 'Carregando Dados...';
+        document.getElementById('personal_email').disabled = true;
+
+        try {
+            const response = await fetch(`/api/users/${userId}`);
+            const result = await response.json();
+            if(!response.ok) throw new Error(result.error);
+            const user = result.data;
+            document.getElementById('user-id').value = user.idADM;
+            document.getElementById('nome_login').value = user.nome_login;
+            document.getElementById('nome_completo').value = user.nome_completo;
+            document.getElementById('personal_email').value = user.corporate_email; // O e-mail pessoal não é editável aqui
+            document.getElementById('phone').value = user.telefone;
+            document.getElementById('admission_date').value = user.dataAdmissao;
+            document.getElementById('new-user-role').value = user.perfil.charAt(0).toUpperCase() + user.perfil.slice(1).toLowerCase();
+            document.getElementById('user-modal-title').textContent = 'Editar Usuário';
+            document.querySelectorAll('#user-skills-checkboxes input').forEach(checkbox => {
+                checkbox.checked = user.skills.includes(checkbox.value);
+            });
+        } catch (error) {
+            showToast(error.message, true);
+            closeModal('users-modal');
+        }
+    }
+
+    function openUrgenciaModal(event) {
+        const { projectId, projectName, projectUrgency } = event.currentTarget.dataset;
+        document.getElementById('urgencia-project-id').value = projectId;
+        document.getElementById('urgencia-project-name').textContent = projectName;
+        document.getElementById('urgencia-select').value = projectUrgency || 'Média';
+        openModal('urgencia-modal');
+    }
+
+    async function openAdesaoModal(event) {
+        const { projectId, projectName } = event.currentTarget.dataset;
+        document.getElementById('adesao-form').reset();
+        document.getElementById('additional-collaborators-container').innerHTML = '';
+        document.getElementById('adesao-project-id').value = projectId;
+        document.getElementById('adesao-project-name').textContent = projectName;
+        
+        const select = document.getElementById('estagiario_responsavel');
+        const project = allProjects.find(p => p.idDemandas == projectId);
+        const habilidadesElement = document.getElementById('adesao-habilidades');
+        select.innerHTML = '<option value="">Buscando sugestões...</option>';
+        select.disabled = true;
+
+        if (project && project.descricao) {
+            const habilidadesMatch = project.descricao.match(/Habilidades Desejadas:\s*(.+)/i);
+            if (habilidadesMatch) {
+                const habilidades = habilidadesMatch[1].trim();
+                habilidadesElement.innerHTML = habilidades.split(',').map(h => 
+                    `<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">${h.trim()}</span>`
+                ).join('');
+            } else {
+                habilidadesElement.innerHTML = '<span class="text-blue-600">Nenhuma habilidade específica informada</span>';
+            }
+        } else {
+            habilidadesElement.innerHTML = '<span class="text-blue-600">Nenhuma informação disponível</span>';
+        }
+
+        openModal('adesao-modal');
+
+        try {
+            const [suggestionsRes, usersRes] = await Promise.all([
+                fetch(`/api/project/${projectId}/adherence`),
+                fetch(`/api/users`)
+            ]);
+            const suggestions = await suggestionsRes.json();
+            const usersResult = await usersRes.json();
+            allUsers = usersResult.data || [];
+
+            if (!suggestionsRes.ok) throw new Error(suggestions.error || 'Falha ao buscar sugestões.');
+
+            if (suggestions && suggestions.length > 0) {
+                select.innerHTML = '<option value="">-- Selecione um responsável --</option>' + suggestions.map(s => 
+                    `<option value="${s.nome}">${s.nome} (${s.aderencia}% de aderência)</option>`
+                ).join('');
+            } else {
+                select.innerHTML = '<option value="">Nenhum colaborador compatível.</option>';
+            }
+        } catch (error) {
+            showToast(error.message, true);
+            select.innerHTML = '<option value="">Erro ao carregar.</option>';
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    function openAndamentoModal(event) {
+        const { projectId, projectName } = event.currentTarget.dataset;
+        document.getElementById('andamento-form').reset();
+        document.getElementById('andamento-project-id').value = projectId;
+        document.getElementById('andamento-project-name').textContent = projectName;
+        openModal('andamento-modal');
+    }
+
+    function addCollaboratorField() {
+        const container = document.getElementById('additional-collaborators-container');
+        const newField = document.createElement('div');
+        newField.className = 'flex items-center gap-2';
+        
+        let optionsHtml = allUsers.map(user => `<option value="${user.nome_completo}">${user.nome_completo}</option>`).join('');
+
+        newField.innerHTML = `
+        <div class="flex gap-2 items-start">
+            <select class="additional-collaborator-select w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                <option value="">-- Selecione um co-responsável --</option>
+                ${optionsHtml}
+            </select>
+            <button type="button" class="remove-collaborator-btn px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors">
+                &times;
+            </button>
+        </div>
+    `;
+
+        newField.querySelector('.remove-collaborator-btn').addEventListener('click', () => newField.remove());
+        container.appendChild(newField);
+    }
+
+    function populateSkillsCheckboxes(containerId) {
+        const skills = [
+            'Frontend', 'Backend', 'Banco de Dados SQL', 'NoSQL', 'API REST', 'Mobile', 'Testes QA', 'DevOps', 'Cloud AWS', 'Cloud Azure', 
+            'Análise de Dados', 'Machine Learning', 'BI', 'Power BI', 'Python', 'JavaScript', 'Java', 'C#', '.NET', 'React', 'Angular', 'Vue.js',
+            'UI/UX Design', 'Design Gráfico', 'Gestão de Projetos', 'Marketing Digital', 'SEO', 'Análise de Requisitos', 'Suporte Técnico'
+        ];
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = skills.map(skill => `
+                <label class="flex items-center space-x-2 text-sm text-gray-700">
+                    <input type="checkbox" class="rounded border-gray-300 text-ruby-red focus:ring-ruby-red" value="${skill}">
+                    <span>${skill}</span>
+                </label>
+            `).join('');
+        }
+    } 
+
+    
+</script>
+</body>
+</html>
+
+
